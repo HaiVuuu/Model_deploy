@@ -1,0 +1,25 @@
+name: "super_resolution_onnx"
+backend: "onnxruntime"
+max_batch_size: 32  # Adjust based on hardware capacity
+
+input [
+  {
+    name: "input"
+    data_type: TYPE_FP32
+    dims: [1, 224, 224]  # Single-channel grayscale input
+  }
+]
+
+output [
+  {
+    name: "output"
+    data_type: TYPE_FP32
+    dims: [1, 672, 672]  # 3x super-resolution output
+  }
+]
+
+instance_group [
+  {
+    kind: KIND_CPU  # Change to KIND_CPU if needed
+  }
+]
