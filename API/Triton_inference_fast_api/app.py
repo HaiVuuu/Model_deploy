@@ -1,4 +1,5 @@
 from fastapi import FastAPI, UploadFile, File
+from fastapi.responses import StreamingResponse
 import numpy as np
 from tritonclient.http import InferenceServerClient, InferInput, InferRequestedOutput
 from PIL import Image
@@ -13,6 +14,8 @@ MODEL_NAME = "super_resolution_onnx"
 
 # Connect to Triton
 client = InferenceServerClient(url=TRITON_SERVER_URL)
+
+
 
 @app.post("/infer")
 async def infer(file: UploadFile = File(...)):
@@ -32,7 +35,13 @@ async def infer(file: UploadFile = File(...)):
     # Send request to Triton
     results = client.infer(model_name=MODEL_NAME, inputs=[inputs], outputs=[outputs])
     
-    # Get output
-    inference_output = results.as_numpy("output")
-    
-    return {"output_shape": inference_output.shape}
+    # Get output and convert to image
+    inference_output = results.as_numpy("output")[0, 0]  # Remove batch & channel dims
+    output_img = Image.fromarray((inference_output * 255).astype(np.uint8))  # Convert to grayscale image
+
+    # Convert to BytesIO for streaming response
+    img_io = io.BytesIO()
+    output_img.save(img_io, format="PNG")
+    img_io.seek(0)
+
+    return StreamingResponse(img_io, media_type="image/png")
